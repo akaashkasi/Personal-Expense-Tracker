@@ -1,6 +1,5 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-24ddc0f5d75046c5622901739e7c5dd533143b0c8e959d652212380cedb1ea36.svg)](https://classroom.github.com/a/RQfdh2iK)
-# TODO: give a name to your project (Cargo project name)
-Rust-based GUI for Personal Expense Tracker
+# Rust-based GUI for Personal Expense Tracker
 
 ## Description
 The proposed project is a personal expense tracker with a graphical user interface (GUI), designed to assist users in managing their finances. The primary goal is to provide an easy-to-use platform where individuals can record, track, and analyze their daily expenditures to make more informed budgeting decisions. The utility of this project lies in its ability to help users spot spending patterns, identify areas where they can save, and ultimately achieve better financial health.
