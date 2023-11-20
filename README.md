@@ -9,8 +9,12 @@ For the GUI component, we plan to use the egui crate, which offers an immediate 
 
 ## Installation
 
-TODO: how to compile and install your project. This can be a trivial `cargo` command, but you may provide additional setup instructions, if needed. The goal here is to make sure that the instructor can compile/install and setup your project.
+1. Make sure you install sql-lite <https://www.tutorialspoint.com/sqlite/sqlite_installation.htm>
 
 ## How to use
 
 TODO: describe how to use you project after compilation, installation and setup. Show some example use-cases if these are relevant.
+
+1. Go into the expense_tracker directory
+    - cd expense_tracker
+2. 
