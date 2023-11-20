@@ -56,5 +56,4 @@ mod tests {
     }
 }
 
-
 // Path: expense_tracker/tests/models_tests.rs

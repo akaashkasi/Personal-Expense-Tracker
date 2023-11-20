@@ -53,19 +53,24 @@ pub fn render_ui(ctx: &egui::Context, app: &mut MyApp) {
                     .selected_text(app.payment_method.clone())
                     .show_ui(ui, |ui| {
                         for payment_method in payment_methods.iter() {
-                            ui.selectable_value(&mut app.payment_method, payment_method.to_string(), *payment_method);
+                            ui.selectable_value(
+                                &mut app.payment_method,
+                                payment_method.to_string(),
+                                *payment_method,
+                            );
                         }
                     });
             });
-        
+
             let add_button = ui.add(egui::Button::new("Add"));
 
             if add_button.clicked() {
-                if !app.expense_name.is_empty() &&
-                !app.expense_amount.is_empty() &&
-                !app.expense_date.is_empty() &&
-                !app.category.is_empty() &&
-                !app.payment_method.is_empty() {
+                if !app.expense_name.is_empty()
+                    && !app.expense_amount.is_empty()
+                    && !app.expense_date.is_empty()
+                    && !app.category.is_empty()
+                    && !app.payment_method.is_empty()
+                {
                     app.add_expense_to_db();
                     app.warning_message = None; // Clear any previous warning
                 } else {
