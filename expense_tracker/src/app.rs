@@ -1,8 +1,8 @@
 use crate::models;
+use crate::models::add_user;
 use crate::models::{add_expense, Expense, User};
 use crate::ui;
 use eframe::egui;
-use crate::models::add_user;
 
 pub struct MyApp {
     pub expense_name: String,
@@ -78,7 +78,7 @@ impl MyApp {
         match add_user(&user, &self.new_password) {
             Ok(_) => self.warning_message = Some("User successfully registered!".to_string()),
             Err(e) => self.warning_message = Some(format!("Failed to register: {:?}", e)),
-        }        
+        }
     }
 
     fn show_signup(&mut self) {

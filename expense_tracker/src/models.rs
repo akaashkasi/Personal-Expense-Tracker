@@ -1,6 +1,5 @@
 use bcrypt::verify;
-use rusqlite::{params, Connection, Result, OptionalExtension};
-
+use rusqlite::{params, Connection, OptionalExtension, Result};
 
 pub struct Expense {
     pub id: i32,
@@ -108,21 +107,30 @@ pub fn add_user(user: &User, password: &str) -> Result<(), MyError> {
 
 pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>> {
     let conn = Connection::open("expenses.db")?;
-    if let Ok(mut stmt) = conn.prepare("SELECT id, username, password_hash FROM users WHERE username = ?1") {
-        if let Some(row) = stmt.query_row(params![username], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-        }).optional()? {
+    if let Ok(mut stmt) =
+        conn.prepare("SELECT id, username, password_hash FROM users WHERE username = ?1")
+    {
+        if let Some(row) = stmt
+            .query_row(params![username], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })
+            .optional()?
+        {
             let (user_id, user_name, password_hash): (i32, String, String) = row;
             // Correctly handle bcrypt errors
             match verify(password, &password_hash) {
                 Ok(valid) => {
                     if valid {
-                        return Ok(Some(User { id: user_id, username: user_name, password_hash: password_hash }));
+                        return Ok(Some(User {
+                            id: user_id,
+                            username: user_name,
+                            password_hash: password_hash,
+                        }));
                     }
-                },
+                }
                 Err(_) => {
                     // Handle bcrypt error (e.g., log it or return a specific error)
-                },
+                }
             }
         }
     }

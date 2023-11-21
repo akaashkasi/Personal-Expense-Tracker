@@ -41,7 +41,6 @@ pub fn render_signup_ui(ui: &mut egui::Ui, app: &mut MyApp) {
         if ui.button("Sign Up").clicked() {
             app.process_signup();
         }
-        
 
         // Display warning or success messages
         if let Some(warning) = &app.warning_message {
@@ -49,7 +48,6 @@ pub fn render_signup_ui(ui: &mut egui::Ui, app: &mut MyApp) {
         }
     });
 }
-
 
 pub fn render_expense_tracker_ui(ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui::Context) {
     let mut style: egui::Style = (*ctx.style()).clone();
