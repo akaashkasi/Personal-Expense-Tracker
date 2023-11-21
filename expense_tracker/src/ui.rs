@@ -2,7 +2,56 @@ use crate::app::MyApp;
 use eframe::egui;
 use eframe::egui::Color32;
 
-pub fn render_ui(ctx: &egui::Context, app: &mut MyApp) {
+pub fn render_login_ui(ui: &mut egui::Ui, app: &mut MyApp) {
+    let username = app.username.clone();
+    let password = app.password.clone();
+    ui.vertical_centered(|ui| {
+        ui.heading("Login to Expense Tracker");
+        ui.horizontal(|ui| {
+            ui.label("Username:");
+            ui.text_edit_singleline(&mut app.username);
+            ui.label("Password:");
+            ui.text_edit_singleline(&mut app.password);
+        });
+        if ui.button("Login").clicked() {
+            // Implement login logic in MyApp
+            app.process_login(&username, &password);
+        }
+    });
+    if let Some(warning) = &app.warning_message {
+        ui.colored_label(egui::Color32::RED, warning);
+    }
+}
+
+pub fn render_signup_ui(ui: &mut egui::Ui, app: &mut MyApp) {
+    ui.vertical_centered(|ui| {
+        ui.heading("Sign Up for Expense Tracker");
+
+        ui.horizontal(|ui| {
+            ui.label("New Username:");
+            ui.text_edit_singleline(&mut app.new_username);
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("New Password:");
+            // Obfuscate password input
+            ui.add(egui::TextEdit::singleline(&mut app.new_password).password(true));
+        });
+
+        if ui.button("Sign Up").clicked() {
+            app.process_signup();
+        }
+        
+
+        // Display warning or success messages
+        if let Some(warning) = &app.warning_message {
+            ui.colored_label(egui::Color32::RED, warning);
+        }
+    });
+}
+
+
+pub fn render_expense_tracker_ui(ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui::Context) {
     let mut style: egui::Style = (*ctx.style()).clone();
 
     // Example styling modifications
@@ -27,7 +76,9 @@ pub fn render_ui(ctx: &egui::Context, app: &mut MyApp) {
         });
 
         ui.separator();
-
+        if ui.button("Logout").clicked() {
+            app.logout();
+        }
         ui.vertical(|ui| {
             ui.heading("Add New Expense");
             ui.horizontal(|ui| {
