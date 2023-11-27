@@ -1,8 +1,11 @@
 use crate::models;
 use crate::models::add_user;
+use crate::models::MyError;
 use crate::models::{add_expense, Expense, User};
 use crate::ui;
 use eframe::egui;
+use rusqlite::params;
+use rusqlite::Connection;
 
 pub struct MyApp {
     pub expense_name: String,
@@ -46,6 +49,7 @@ impl MyApp {
     }
 
     pub fn process_login(&mut self, username: &str, password: &str) {
+        self.warning_message = None;
         if let Ok(Some(user)) = models::authenticate_user(username, password) {
             self.is_logged_in = true;
             self.current_user = Some(user);
@@ -65,19 +69,53 @@ impl MyApp {
         self.showing_signup = true;
     }
 
+    fn is_password_valid(&self, password: &str) -> bool {
+        let has_number = password.chars().any(|c| c.is_digit(10));
+        let has_symbol = password.chars().any(|c| !c.is_alphanumeric());
+        let has_min_length = password.len() >= 5;
+
+        has_number && has_symbol && has_min_length
+    }
+
     pub fn process_signup(&mut self) {
+        self.warning_message = None;
+
+        // First, check if the username and password fields are not empty
         if self.new_username.is_empty() || self.new_password.is_empty() {
             self.warning_message = Some("Username and password cannot be empty".to_string());
             return;
         }
-        let user = User {
-            id: 0, // Or generate an ID as needed
-            username: self.new_username.clone(),
-            password_hash: String::new(), // This will be set in add_user
-        };
-        match add_user(&user, &self.new_password) {
-            Ok(_) => self.warning_message = Some("User successfully registered!".to_string()),
-            Err(e) => self.warning_message = Some(format!("Failed to register: {:?}", e)),
+
+        // Then, check if the username already exists
+        match models::is_username_unique(&self.new_username) {
+            Ok(false) => {
+                self.warning_message = Some("Username already exists".to_string());
+                return;
+            }
+            Err(_) => {
+                self.warning_message = Some("Failed to check username uniqueness".to_string());
+                return;
+            }
+            Ok(true) => {
+                // Username is unique, now validate password complexity
+                if !self.is_password_valid(&self.new_password) {
+                    self.warning_message = Some("Password must be at least 5 characters long, include a number and a symbol".to_string());
+                    return;
+                }
+
+                // Proceed with adding the user
+                let user = User {
+                    id: 0, // Or generate an ID as needed
+                    username: self.new_username.clone(),
+                    password_hash: String::new(), // This will be set in add_user
+                };
+                match add_user(&user, &self.new_password) {
+                    Ok(_) => {
+                        self.warning_message = Some("User successfully registered!".to_string())
+                    }
+                    Err(e) => self.warning_message = Some(format!("Failed to register: {:?}", e)),
+                }
+            }
         }
     }
 

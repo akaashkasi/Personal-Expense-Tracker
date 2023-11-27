@@ -9,18 +9,16 @@ pub fn render_login_ui(ui: &mut egui::Ui, app: &mut MyApp) {
         ui.heading("Login to Expense Tracker");
         ui.horizontal(|ui| {
             ui.label("Username:");
-            ui.text_edit_singleline(&mut app.username);
+            styled_text_edit(ui, &mut app.username);
             ui.label("Password:");
-            ui.text_edit_singleline(&mut app.password);
+            ui.add(egui::TextEdit::singleline(&mut app.password).password(true));
         });
         if ui.button("Login").clicked() {
             // Implement login logic in MyApp
             app.process_login(&username, &password);
         }
     });
-    if let Some(warning) = &app.warning_message {
-        ui.colored_label(egui::Color32::RED, warning);
-    }
+    display_warning_message(ui, app);
 }
 
 pub fn render_signup_ui(ui: &mut egui::Ui, app: &mut MyApp) {
@@ -29,7 +27,7 @@ pub fn render_signup_ui(ui: &mut egui::Ui, app: &mut MyApp) {
 
         ui.horizontal(|ui| {
             ui.label("New Username:");
-            ui.text_edit_singleline(&mut app.new_username);
+            styled_text_edit(ui, &mut app.new_username);
         });
 
         ui.horizontal(|ui| {
@@ -41,24 +39,50 @@ pub fn render_signup_ui(ui: &mut egui::Ui, app: &mut MyApp) {
         if ui.button("Sign Up").clicked() {
             app.process_signup();
         }
+    });
+    display_warning_message(ui, app);
+}
 
-        // Display warning or success messages
-        if let Some(warning) = &app.warning_message {
-            ui.colored_label(egui::Color32::RED, warning);
-        }
+pub fn styled_text_edit(ui: &mut egui::Ui, text: &mut String) {
+    ui.scope(|ui| {
+        let mut style = (*ui.ctx().style()).clone();
+        style.visuals.widgets.noninteractive.bg_fill = Color32::from_gray(240); // Custom background color
+        style.visuals.widgets.noninteractive.bg_stroke = egui::Stroke::none(); // Remove border
+        ui.ctx().set_style(style);
+
+        ui.text_edit_singleline(text);
     });
 }
 
-pub fn render_expense_tracker_ui(ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui::Context) {
+// Function to display warning message
+fn display_warning_message(ui: &mut egui::Ui, app: &MyApp) {
+    if let Some(warning) = &app.warning_message {
+        ui.colored_label(Color32::RED, warning);
+    }
+}
+
+pub fn render_expense_tracker_ui(_ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui::Context) {
     let mut style: egui::Style = (*ctx.style()).clone();
 
-    // Example styling modifications
-    style.visuals.widgets.noninteractive.bg_fill = Color32::from_rgb(235, 235, 235); // Background color
-    style.visuals.widgets.noninteractive.fg_stroke.color = Color32::BLACK; // Text color
-    style.visuals.widgets.active.bg_fill = Color32::from_rgb(210, 210, 210); // Background color when active
-    style.visuals.widgets.active.fg_stroke.color = Color32::BLACK; // Text color when active
-    style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(220, 220, 220); // Background color when hovered
-    style.visuals.widgets.hovered.fg_stroke.color = Color32::BLACK; // Text color when hovered
+    // Define theme colors
+    let primary_color = Color32::from_rgb(100, 149, 237); // Cornflower blue
+    let lighter_primary_color = Color32::from_rgb(130, 179, 255); // Lighter shade of primary color
+    let secondary_color = Color32::from_rgb(245, 245, 245); // White smoke
+
+    // General styling
+    style.visuals.widgets.noninteractive.bg_fill = secondary_color;
+    style.visuals.widgets.noninteractive.fg_stroke.color = Color32::BLACK;
+    style.visuals.widgets.active.bg_fill = primary_color;
+    style.visuals.widgets.active.fg_stroke.color = Color32::WHITE;
+    style.visuals.widgets.hovered.bg_fill = lighter_primary_color;
+    style.visuals.widgets.hovered.fg_stroke.color = Color32::WHITE;
+
+    // Button styling
+    style.visuals.button_frame = true;
+    style.visuals.widgets.open.rounding = egui::Rounding::from(4.0); // Apply rounding to buttons
+
+    // Text styling
+    style.visuals.override_text_color = Some(Color32::BLACK);
 
     ctx.set_style(style);
     let mut expenses_to_delete: Vec<i32> = Vec::new();

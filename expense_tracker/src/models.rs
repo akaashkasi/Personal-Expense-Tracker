@@ -71,6 +71,16 @@ pub fn get_expenses() -> Result<Vec<Expense>> {
     Ok(expenses)
 }
 
+pub fn is_username_unique(username: &str) -> Result<bool, MyError> {
+    let conn = Connection::open("expenses.db")?;
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM users WHERE username = ?1",
+        params![username],
+        |row| row.get(0),
+    )?;
+    Ok(count == 0)
+}
+
 pub fn delete_expense(expense_id: i32) -> Result<()> {
     let conn = Connection::open("expenses.db")?;
     conn.execute("DELETE FROM expenses WHERE id = ?1", params![expense_id])?;
