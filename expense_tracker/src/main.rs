@@ -11,6 +11,6 @@ fn main() {
     eframe::run_native(
         "Expense Tracker",
         options,
-        Box::new(|_| Box::new(app::MyApp::new())),
+        Box::new(|cc| Box::new(app::MyApp::new(&cc.egui_ctx))),
     );
 }

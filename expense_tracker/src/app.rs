@@ -1,11 +1,21 @@
 use crate::models;
 use crate::models::add_user;
-use crate::models::MyError;
+use std::collections::HashMap;
+use chrono::NaiveDate;
 use crate::models::{add_expense, Expense, User};
 use crate::ui;
 use eframe::egui;
-use rusqlite::params;
-use rusqlite::Connection;
+use image::{io::Reader as ImageReader, DynamicImage, GenericImageView};
+use crate::ui::create_monthly_spending_chart;
+use crate::ui::load_texture_from_memory;
+
+fn load_image_to_memory(file_path: &str) -> Result<(Vec<u8>, [u32; 2]), image::ImageError> {
+    let img = ImageReader::open(file_path)?.decode()?;
+    let dimensions = img.dimensions();
+    Ok((img.to_rgba8().into_raw(), [dimensions.0, dimensions.1]))
+}
+
+
 
 pub struct MyApp {
     pub expense_name: String,
@@ -23,10 +33,11 @@ pub struct MyApp {
     pub new_username: String,
     pub new_password: String,
     pub showing_signup: bool,
+    pub image_texture: Option<egui::TextureHandle>,
 }
 
 impl MyApp {
-    pub fn new() -> Self {
+    pub fn new(egui_ctx: &egui::Context) -> Self {
         let mut app = MyApp {
             expense_name: String::new(),
             expense_amount: String::new(),
@@ -43,10 +54,60 @@ impl MyApp {
             new_username: String::new(),
             new_password: String::new(),
             showing_signup: false,
+            image_texture: None,
         };
         app.load_expenses();
+        app.update_monthly_spending_chart(egui_ctx);
         app
     }
+
+    pub fn calculate_category_totals(&self) -> HashMap<String, f32> {
+        let mut category_totals = HashMap::new();
+        for expense in &self.expenses {
+            let amount = category_totals.entry(expense.category.clone()).or_insert(0.0);
+            *amount += expense.amount;
+        }
+        category_totals
+    }
+
+    pub fn update_chart(&mut self, egui_ctx: &egui::Context) {
+        self.update_monthly_spending_chart(egui_ctx); // This already recalculates and updates the chart
+        egui_ctx.request_repaint(); // Request the UI to repaint after updating the chart
+    }
+
+    // In MyApp struct in app.rs
+    pub fn update_monthly_spending_chart(&mut self, egui_ctx: &egui::Context) {
+        println!("Updating chart");
+        let monthly_spending = self.calculate_category_totals();
+        println!("Monthly spending data: {:?}", monthly_spending);
+        match create_monthly_spending_chart(&monthly_spending) {
+            Ok(_) => {
+                println!("Chart created successfully.");
+                if let Ok((image_data, image_size)) = load_image_to_memory("chart.png") {
+                    println!("Loaded image to memory.");
+                    let image_size_usize = [image_size[0] as usize, image_size[1] as usize];
+                    
+                    // Ensure we use a unique identifier for the texture to avoid caching issues
+                    let texture_id = format!("chart_texture_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
+                    
+                    // Dispose of the old texture and create a new one
+                    let texture_id_clone = texture_id.clone();
+                    self.image_texture = Some(load_texture_from_memory(
+                        egui_ctx,
+                        &image_data,
+                        image_size_usize,
+                        texture_id_clone,
+                    ));
+                    println!("Texture updated in egui context with ID {}", texture_id);
+                }
+            }
+            Err(e) => eprintln!("Error creating chart: {:?}", e),
+        }
+        egui_ctx.request_repaint();
+    }
+    
+  
+    
 
     pub fn process_login(&mut self, username: &str, password: &str) {
         self.warning_message = None;
@@ -57,6 +118,19 @@ impl MyApp {
         } else {
             self.warning_message = Some("Invalid username or password".to_string());
         }
+    }
+
+    pub fn get_monthly_spending(&self) -> HashMap<String, f32> {
+        let mut monthly_spending = HashMap::new();
+        
+        for expense in &self.expenses {
+            let date = NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d").unwrap();
+            let month = date.format("%Y-%m").to_string();
+            let amount = monthly_spending.entry(month).or_insert(0.0);
+            *amount += expense.amount;
+        }
+
+        monthly_spending
     }
 
     pub fn logout(&mut self) {
@@ -130,7 +204,7 @@ impl MyApp {
         self.expenses = models::get_expenses().unwrap_or_default();
     }
 
-    pub fn add_expense_to_db(&mut self) {
+    pub fn add_expense_to_db(&mut self, egui_ctx: &egui::Context) {
         let amount = self.expense_amount.parse::<f32>().unwrap_or(0.0);
 
         let expense = Expense {
@@ -150,13 +224,17 @@ impl MyApp {
         self.expense_amount.clear();
         self.payment_method.clear();
         self.category.clear();
+        self.update_monthly_spending_chart(egui_ctx);
+        self.update_chart(egui_ctx);
     }
 
-    pub fn delete_expense_from_db(&mut self, expense_id: i32) {
+    pub fn delete_expense_from_db(&mut self, expense_id: i32, egui_ctx: &egui::Context) {
         if let Err(e) = models::delete_expense(expense_id) {
             eprintln!("Failed to delete expense: {}", e);
         }
         self.load_expenses();
+        self.update_monthly_spending_chart(egui_ctx);
+        self.update_chart(egui_ctx);
     }
 }
 
