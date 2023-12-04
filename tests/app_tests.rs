@@ -2,7 +2,6 @@ use expense_tracker::ui::MyApp;
 #[cfg(test)]
 mod tests {
     use super::*; // Import everything from the parent module
-    
 
     #[test]
     fn test_add_expense() {

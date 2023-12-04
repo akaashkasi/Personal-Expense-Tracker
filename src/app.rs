@@ -1,21 +1,19 @@
 use crate::models;
 use crate::models::add_user;
-use std::collections::HashMap;
-use chrono::NaiveDate;
 use crate::models::{add_expense, Expense, User};
 use crate::ui;
-use eframe::egui;
-use image::{io::Reader as ImageReader, DynamicImage, GenericImageView};
 use crate::ui::create_monthly_spending_chart;
 use crate::ui::load_texture_from_memory;
+use chrono::NaiveDate;
+use eframe::egui;
+use image::{io::Reader as ImageReader, DynamicImage, GenericImageView};
+use std::collections::HashMap;
 
 fn load_image_to_memory(file_path: &str) -> Result<(Vec<u8>, [u32; 2]), image::ImageError> {
     let img = ImageReader::open(file_path)?.decode()?;
     let dimensions = img.dimensions();
     Ok((img.to_rgba8().into_raw(), [dimensions.0, dimensions.1]))
 }
-
-
 
 pub struct MyApp {
     pub expense_name: String,
@@ -64,7 +62,9 @@ impl MyApp {
     pub fn calculate_category_totals(&self) -> HashMap<String, f32> {
         let mut category_totals = HashMap::new();
         for expense in &self.expenses {
-            let amount = category_totals.entry(expense.category.clone()).or_insert(0.0);
+            let amount = category_totals
+                .entry(expense.category.clone())
+                .or_insert(0.0);
             *amount += expense.amount;
         }
         category_totals
@@ -86,10 +86,16 @@ impl MyApp {
                 if let Ok((image_data, image_size)) = load_image_to_memory("chart.png") {
                     println!("Loaded image to memory.");
                     let image_size_usize = [image_size[0] as usize, image_size[1] as usize];
-                    
+
                     // Ensure we use a unique identifier for the texture to avoid caching issues
-                    let texture_id = format!("chart_texture_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
-                    
+                    let texture_id = format!(
+                        "chart_texture_{}",
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis()
+                    );
+
                     // Dispose of the old texture and create a new one
                     let texture_id_clone = texture_id.clone();
                     self.image_texture = Some(load_texture_from_memory(
@@ -105,9 +111,6 @@ impl MyApp {
         }
         egui_ctx.request_repaint();
     }
-    
-  
-    
 
     pub fn process_login(&mut self, username: &str, password: &str) {
         self.warning_message = None;
@@ -122,7 +125,7 @@ impl MyApp {
 
     pub fn get_monthly_spending(&self) -> HashMap<String, f32> {
         let mut monthly_spending = HashMap::new();
-        
+
         for expense in &self.expenses {
             let date = NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d").unwrap();
             let month = date.format("%Y-%m").to_string();

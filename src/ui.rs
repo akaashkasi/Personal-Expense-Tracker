@@ -6,6 +6,7 @@ use image::{io::Reader as ImageReader, ImageError};
 use plotters::prelude::*;
 use plotters::style::{Color, ShapeStyle};
 use std::collections::HashMap;
+use std::error::Error;
 
 const ORANGE: RGBColor = RGBColor(255, 165, 0);
 const PURPLE: RGBColor = RGBColor(128, 0, 128);
@@ -26,7 +27,7 @@ pub fn load_texture_from_memory(
     egui_ctx: &egui::Context,
     image_data: &[u8],
     size: [usize; 2],
-    texture_id: String
+    texture_id: String,
 ) -> egui::TextureHandle {
     let image = egui::ColorImage::from_rgba_unmultiplied(size, image_data);
     let image_data: egui::ImageData = image.into();
@@ -47,87 +48,37 @@ const EXPENSE_CATEGORIES: &[&str] = &[
     "Miscellaneous",
 ];
 
-
-
-pub fn create_monthly_spending_chart(
-    data: &HashMap<String, f32>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Creating monthly spending chart..."); // Diagnostic message
+pub fn create_monthly_spending_chart(data: &HashMap<String, f32>) -> Result<(), Box<dyn Error>> {
+    println!("Creating monthly spending chart...");
     println!("Data received for chart: {:?}", data);
+
     let root_area = BitMapBackend::new("chart.png", (640, 480)).into_drawing_area();
     root_area.fill(&WHITE)?;
-    let mut midpoints: Vec<(f64, String)> = Vec::new();
 
     let total_expenses: f32 = data.values().sum();
-    let colors = vec![RED, BLUE, GREEN, YELLOW, CYAN, MAGENTA, ORANGE, PINK, PURPLE, LIME_GREEN, INDIGO];
+    let mut sizes = Vec::new();
+    let mut labels = Vec::new();
+
+    let colors = vec![
+        RED, BLUE, GREEN, YELLOW, CYAN, MAGENTA, ORANGE, PINK, PURPLE, LIME_GREEN, INDIGO,
+    ];
+    let mut color_iter = colors.into_iter().cycle();
 
     let center = (320, 240);
     let radius = 150.0;
-    let mut start_angle_degrees = -90.0 as f64;  // Start from the top of the circle
 
-    // If there's only one entry, draw a full circle
-    if data.len() == 1 {
-        let category = data.keys().next().unwrap(); // Get the single category
-        let filled_style = ShapeStyle {
-            color: colors[0].to_rgba().mix(0.8).into(), // Use the first color
-            filled: true,
-            stroke_width: 2,
-        };
-        root_area.draw(&Circle::new(center, radius, filled_style))?;
-    } else {
-        // Draw segments for each category
-        for (index, (category, &amount)) in data.iter().enumerate() {
-            println!("Processing category: {}, amount: {}", category, amount); // Diagnostic message
-            let fraction = (amount / total_expenses) as f64;
-            let sweep = fraction * 360.0; // Degrees of the circle that this category occupies
-            let end_angle_degrees = start_angle_degrees + sweep;
-            let end_angle = end_angle_degrees.to_radians(); // Convert to radians for the drawing
-            
-            // Define the color for this segment
-            let color = colors[index % colors.len()].to_rgba().mix(0.8).into();
-            
-            // Create a filled style for the pie segment
-            let filled_style = ShapeStyle {
-                color: color,
-                filled: true,
-                stroke_width: 2,
-            };
-            let midpoint_angle_degrees = start_angle_degrees + sweep / 2.0;
-            midpoints.push((midpoint_angle_degrees, category.clone()));
-            
-            // Draw the pie segment
-            root_area.draw(&PathElement::new(
-                vec![
-                    center,
-                    polar_to_cartesian(center, radius, start_angle_degrees.to_radians()),
-                    polar_to_cartesian(center, radius, end_angle),
-                    center,
-                ],
-                filled_style,
-            ))?;
-            
-            start_angle_degrees = end_angle_degrees; // Set up the start angle for the next segment
-        }
-
-        for (angle_degrees, category) in midpoints {
-            // Convert the midpoint angle to radians and calculate label position
-            let label_angle = angle_degrees.to_radians();
-            let (label_x, label_y) = polar_to_cartesian(center, radius + 20.0 /* label offset */, label_angle);
-        
-            // Create a TextStyle
-            let text_style = TextStyle::from(("Arial", 15).into_font()).color(&BLACK);
-        
-            // Draw the category label
-            root_area.draw_text(
-                &category,
-                &text_style,
-                (label_x, label_y),
-            )?;
-        }
+    for (category, &amount) in data.iter() {
+        let proportion = (amount / total_expenses) as f64;
+        sizes.push(proportion * 100.0); // Converting proportion to a percentage
+        labels.push(category.clone());
     }
-    println!("Finished drawing chart."); // Diagnostic message
+
+    let color_slice: Vec<_> = color_iter.take(data.len()).collect();
+
+    root_area.draw(&Pie::new(&center, &radius, &sizes, &color_slice, &labels))?;
+
     root_area.present()?;
-    println!("Chart saved to 'chart.png'."); // Diagnostic message
+
     Ok(())
 }
 
