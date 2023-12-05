@@ -22,7 +22,7 @@ pub fn load_texture_from_memory(
 ) -> egui::TextureHandle {
     let image = egui::ColorImage::from_rgba_unmultiplied(size, image_data);
     let image_data: egui::ImageData = image.into();
-    egui_ctx.load_texture(&texture_id, image_data, TextureOptions::default())
+    egui_ctx.load_texture(texture_id, image_data, TextureOptions::default())
 }
 
 const EXPENSE_CATEGORIES: &[&str] = &[
@@ -95,8 +95,8 @@ pub fn create_monthly_spending_chart(data: &HashMap<String, f32>) -> Result<(), 
         // Calculate the position for each custom label
         let angle = std::f64::consts::PI * 2.0 * sizes[i] / 100.0 / 2.0
             + sizes.iter().take(i).sum::<f64>() / 100.0 * std::f64::consts::PI * 2.0;
-        let label_x = center.0 as f64 + angle.cos() * radius as f64 * 0.8;
-        let label_y = center.1 as f64 + angle.sin() * radius as f64 * 0.8;
+        let label_x = center.0 as f64 + angle.cos() * radius * 0.8;
+        let label_y = center.1 as f64 + angle.sin() * radius * 0.8;
 
         // Draw the custom label
         root_area.draw_text(label, &label_font, (label_x as i32, label_y as i32))?;
@@ -318,7 +318,7 @@ pub fn render_expense_tracker_ui(_ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui
                 app.show_yearly_comparison = false;
                 app.show_monthly_spending = false;
                 let monthly_data = calculate_monthly_trends(&app.expenses); // Implement this
-                create_bar_chart("monthly_trends.png", &monthly_data); // Implement this
+                let _ = create_bar_chart("monthly_trends.png", &monthly_data); // Implement this
                 load_and_display_chart(ui, "monthly_trends.png"); // Implement this
             }
 
@@ -327,7 +327,7 @@ pub fn render_expense_tracker_ui(_ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui
                 app.show_monthly_trends = false;
                 app.show_monthly_spending = false;
                 let yearly_data = calculate_yearly_comparison(&app.expenses); // Implement this
-                create_line_graph("yearly_comparison.png", &yearly_data); // Implement this
+                let _ = create_line_graph("yearly_comparison.png", &yearly_data); // Implement this
                 load_and_display_chart(ui, "yearly_comparison.png"); // Implement this
             }
 
@@ -387,7 +387,7 @@ fn create_bar_chart(file_path: &str, data: &HashMap<String, f32>) -> Result<(), 
         .collect();
     let values: Vec<f32> = sorted_data.iter().map(|(_, &value)| value).collect();
 
-    let max_value = values.iter().cloned().fold(0. / 0., f32::max);
+    let max_value = values.iter().fold(f32::MIN, |a, &b| a.max(b));
 
     let mut chart = ChartBuilder::on(&root)
         .caption("Monthly Spending", ("sans-serif", 40).into_font())
@@ -443,7 +443,7 @@ fn create_line_graph(file_path: &str, data: &HashMap<String, f32>) -> Result<(),
         .collect();
     let values: Vec<f32> = sorted_data.iter().map(|(_, &value)| value).collect();
 
-    let max_value = values.iter().cloned().fold(0. / 0., f32::max);
+    let max_value = values.iter().fold(f32::MIN, |a, &b| a.max(b));
 
     let mut chart = ChartBuilder::on(&root)
         .caption("Yearly Spending Comparison", ("sans-serif", 40).into_font())

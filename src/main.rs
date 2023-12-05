@@ -8,7 +8,7 @@ fn main() {
         Ok(_) => println!("Table created successfully"),
         Err(e) => println!("Failed to create table: {}", e),
     }
-    eframe::run_native(
+    let _ = eframe::run_native(
         "Expense Tracker",
         options,
         Box::new(|cc| Box::new(app::MyApp::new(&cc.egui_ctx))),

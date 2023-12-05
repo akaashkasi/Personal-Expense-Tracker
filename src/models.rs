@@ -134,7 +134,7 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>>
                         return Ok(Some(User {
                             id: user_id,
                             username: user_name,
-                            password_hash: password_hash,
+                            password_hash,
                         }));
                     }
                 }
@@ -147,6 +147,7 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>>
     Ok(None)
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn delete_user(username: &str) -> Result<()> {
     let conn = Connection::open("expenses.db")?;
     conn.execute("DELETE FROM users WHERE username = ?1", params![username])?;

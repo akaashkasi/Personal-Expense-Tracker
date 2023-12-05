@@ -112,14 +112,17 @@ mod tests {
         let mut app = create_test_app();
 
         // Mock the user registration process
-        app.new_username = "newuser4".to_string();
-        app.new_password = "newpass".to_string(); // Assuming this meets your password criteria
+        app.new_username = "newuser6".to_string();
+        app.new_password = "newpas".to_string();
         app.process_signup();
 
         // Check the warning message for successful registration
         assert_eq!(
             app.warning_message,
-            Some("Password must be at least 5 characters long, include a number and a symbol".to_string())
+            Some(
+                "Password must be at least 5 characters long, include a number and a symbol"
+                    .to_string()
+            )
         );
     }
 

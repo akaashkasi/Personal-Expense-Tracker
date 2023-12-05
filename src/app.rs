@@ -134,7 +134,7 @@ impl MyApp {
     }
 
     fn is_password_valid(&self, password: &str) -> bool {
-        let has_number = password.chars().any(|c| c.is_digit(10));
+        let has_number = password.chars().any(|c| c.is_ascii_digit());
         let has_symbol = password.chars().any(|c| !c.is_alphanumeric());
         let has_min_length = password.len() >= 5;
 
@@ -144,41 +144,50 @@ impl MyApp {
     pub fn process_signup(&mut self) {
         self.warning_message = None;
 
-        // First, check if the username and password fields are not empty
+        // Check if the username and password fields are not empty
         if self.new_username.is_empty() || self.new_password.is_empty() {
             self.warning_message = Some("Username and password cannot be empty".to_string());
-            return;
+        } else if self.validate_and_register_user().is_err() {
+            // Error handling is done within `validate_and_register_user`
         }
+    }
 
-        // Then, check if the username already exists
-        match models::is_username_unique(&self.new_username) {
-            Ok(false) => {
-                self.warning_message = Some("Username already exists".to_string());
-                return;
+    fn validate_and_register_user(&mut self) -> Result<(), ()> {
+        // Check if the username already exists
+        if models::is_username_unique(&self.new_username).unwrap_or(false) {
+            // Validate password complexity
+            if self.is_password_valid(&self.new_password) {
+                self.register_user()
+            } else {
+                self.warning_message = Some(
+                    "Password must be at least 5 characters long, include a number and a symbol"
+                        .to_string(),
+                );
+                Err(())
             }
-            Err(_) => {
-                self.warning_message = Some("Failed to check username uniqueness".to_string());
-                return;
-            }
-            Ok(true) => {
-                // Username is unique, now validate password complexity
-                if !self.is_password_valid(&self.new_password) {
-                    self.warning_message = Some("Password must be at least 5 characters long, include a number and a symbol".to_string());
-                    return;
-                }
+        } else {
+            self.warning_message = Some("Username already exists".to_string());
+            Err(())
+        }
+    }
 
-                // Proceed with adding the user
-                let user = User {
-                    id: 0, // Or generate an ID as needed
-                    username: self.new_username.clone(),
-                    password_hash: String::new(), // This will be set in add_user
-                };
-                match add_user(&user, &self.new_password) {
-                    Ok(_) => {
-                        self.warning_message = Some("User successfully registered!".to_string())
-                    }
-                    Err(e) => self.warning_message = Some(format!("Failed to register: {:?}", e)),
-                }
+    fn register_user(&mut self) -> Result<(), ()> {
+        // Create a new user instance
+        let user = User {
+            id: 0, // Or generate an ID as needed
+            username: self.new_username.clone(),
+            password_hash: String::new(), // This will be set in add_user
+        };
+
+        // Attempt to add the user to the database
+        match add_user(&user, &self.new_password) {
+            Ok(_) => {
+                self.warning_message = Some("User successfully registered!".to_string());
+                Ok(())
+            }
+            Err(e) => {
+                self.warning_message = Some(format!("Failed to register: {:?}", e));
+                Err(())
             }
         }
     }
