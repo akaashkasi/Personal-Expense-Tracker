@@ -146,3 +146,9 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>>
     }
     Ok(None)
 }
+
+pub fn delete_user(username: &str) -> Result<()> {
+    let conn = Connection::open("expenses.db")?;
+    conn.execute("DELETE FROM users WHERE username = ?1", params![username])?;
+    Ok(())
+}

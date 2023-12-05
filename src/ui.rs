@@ -1,10 +1,10 @@
+use crate::app::load_image_to_memory;
 pub use crate::app::MyApp;
+use crate::models::Expense;
+use chrono::NaiveDate;
 use eframe::egui;
 use eframe::egui::{Color32, TextureOptions};
-use image::GenericImageView;
-use image::{io::Reader as ImageReader, ImageError};
 use plotters::prelude::*;
-use plotters::style::{Color, ShapeStyle};
 use std::collections::HashMap;
 use std::error::Error;
 
@@ -13,15 +13,6 @@ const PURPLE: RGBColor = RGBColor(128, 0, 128);
 const PINK: RGBColor = RGBColor(255, 192, 203);
 const LIME_GREEN: RGBColor = RGBColor(50, 205, 50);
 const INDIGO: RGBColor = RGBColor(75, 0, 130);
-
-pub fn load_image_to_memory(file_path: &str) -> Result<(Vec<u8>, [usize; 2]), ImageError> {
-    let img = ImageReader::open(file_path)?.decode()?;
-    let dimensions = img.dimensions();
-    Ok((
-        img.to_rgba8().into_raw(),
-        [dimensions.0 as usize, dimensions.1 as usize],
-    ))
-}
 
 pub fn load_texture_from_memory(
     egui_ctx: &egui::Context,
@@ -49,44 +40,71 @@ const EXPENSE_CATEGORIES: &[&str] = &[
 ];
 
 pub fn create_monthly_spending_chart(data: &HashMap<String, f32>) -> Result<(), Box<dyn Error>> {
-    println!("Creating monthly spending chart...");
-    println!("Data received for chart: {:?}", data);
-
     let root_area = BitMapBackend::new("chart.png", (640, 480)).into_drawing_area();
     root_area.fill(&WHITE)?;
 
+    let title = "Expense Amounts by Category";
+
+    // Specify the font style as bold and increase the font size if necessary
+    let title_font = FontDesc::new(
+        FontFamily::SansSerif, // You can change this to Arial or any other font if you have it
+        20.0,
+        FontStyle::Bold,
+    )
+    .color(&RGBColor(0, 123, 255)); // Example of a bold, blue color
+
+    let title_pos = (320, 20); // Adjust as needed for your layout
+
+    // Draw the title
+    root_area.draw_text(title, &title_font, title_pos)?;
+
     let total_expenses: f32 = data.values().sum();
     let mut sizes = Vec::new();
-    let mut labels = Vec::new();
+    let mut empty_labels = Vec::new();
+    let mut custom_labels = Vec::new();
 
     let colors = vec![
         RED, BLUE, GREEN, YELLOW, CYAN, MAGENTA, ORANGE, PINK, PURPLE, LIME_GREEN, INDIGO,
     ];
-    let mut color_iter = colors.into_iter().cycle();
+    let color_iter = colors.into_iter().cycle();
 
     let center = (320, 240);
     let radius = 150.0;
+    let label_font = FontDesc::new(FontFamily::SansSerif, 16.0, FontStyle::Normal).color(&BLACK);
 
     for (category, &amount) in data.iter() {
         let proportion = (amount / total_expenses) as f64;
-        sizes.push(proportion * 100.0); // Converting proportion to a percentage
-        labels.push(category.clone());
+        sizes.push(proportion * 100.0); // Proportion in percentage
+        empty_labels.push(""); // Empty label for Pie::new
+        let label = format!("{:.2}% {}", proportion * 100.0, category);
+        custom_labels.push(label);
     }
 
     let color_slice: Vec<_> = color_iter.take(data.len()).collect();
 
-    root_area.draw(&Pie::new(&center, &radius, &sizes, &color_slice, &labels))?;
+    root_area.draw(&Pie::new(
+        &center,
+        &radius,
+        &sizes,
+        &color_slice,
+        &empty_labels,
+    ))?;
+
+    // Draw custom labels
+    for (i, label) in custom_labels.iter().enumerate() {
+        // Calculate the position for each custom label
+        let angle = std::f64::consts::PI * 2.0 * sizes[i] / 100.0 / 2.0
+            + sizes.iter().take(i).sum::<f64>() / 100.0 * std::f64::consts::PI * 2.0;
+        let label_x = center.0 as f64 + angle.cos() * radius as f64 * 0.8;
+        let label_y = center.1 as f64 + angle.sin() * radius as f64 * 0.8;
+
+        // Draw the custom label
+        root_area.draw_text(label, &label_font, (label_x as i32, label_y as i32))?;
+    }
 
     root_area.present()?;
 
     Ok(())
-}
-
-fn polar_to_cartesian(center: (i32, i32), radius: f64, angle_in_radians: f64) -> (i32, i32) {
-    let (cx, cy) = center;
-    let x = (angle_in_radians.cos() * radius) as i32 + cx;
-    let y = (angle_in_radians.sin() * radius) as i32 + cy;
-    (x, y)
 }
 
 pub fn render_login_ui(ui: &mut egui::Ui, app: &mut MyApp) {
@@ -290,6 +308,47 @@ pub fn render_expense_tracker_ui(_ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui
                     }
                 });
         });
+
+        ui.vertical(|ui| {
+            ui.heading("Expense Analytics");
+
+            // Example: Monthly Trends
+            if ui.button("Show Monthly Trends").clicked() {
+                app.show_monthly_trends = true;
+                app.show_yearly_comparison = false;
+                app.show_monthly_spending = false;
+                let monthly_data = calculate_monthly_trends(&app.expenses); // Implement this
+                create_bar_chart("monthly_trends.png", &monthly_data); // Implement this
+                load_and_display_chart(ui, "monthly_trends.png"); // Implement this
+            }
+
+            if ui.button("Show Yearly Comparison").clicked() {
+                app.show_yearly_comparison = true;
+                app.show_monthly_trends = false;
+                app.show_monthly_spending = false;
+                let yearly_data = calculate_yearly_comparison(&app.expenses); // Implement this
+                create_line_graph("yearly_comparison.png", &yearly_data); // Implement this
+                load_and_display_chart(ui, "yearly_comparison.png"); // Implement this
+            }
+
+            if ui.button("Show Monthly Spending").clicked() {
+                app.show_monthly_spending = true;
+                app.show_monthly_trends = false;
+                app.show_yearly_comparison = false;
+            }
+            if app.show_monthly_trends {
+                // Display the chart here
+                // Load and display the chart
+                load_and_display_chart(ui, "monthly_trends.png");
+            } else if app.show_yearly_comparison {
+                // Display yearly comparison chart
+                load_and_display_chart(ui, "yearly_comparison.png");
+            } else if app.show_monthly_spending {
+                // Display monthly spending chart
+                load_and_display_chart(ui, "monthly_spending.png"); // Assume this is the correct file path
+            }
+        });
+
         if let Some(texture) = &app.image_texture {
             // Display the image using the texture
             ui.image(texture);
@@ -301,5 +360,133 @@ pub fn render_expense_tracker_ui(_ui: &mut egui::Ui, app: &mut MyApp, ctx: &egui
     // Process deletions after UI rendering
     for id in expenses_to_delete {
         app.delete_expense_from_db(id, ctx);
+    }
+}
+
+// Function to calculate monthly trends (implement the logic based on your data structure)
+fn calculate_monthly_trends(expenses: &[Expense]) -> HashMap<String, f32> {
+    let mut monthly_totals = HashMap::new();
+    for expense in expenses {
+        let month = expense.date[0..7].to_string(); // Extract YYYY-MM
+        *monthly_totals.entry(month).or_insert(0.0) += expense.amount;
+    }
+    monthly_totals
+}
+
+// Function to create a bar chart (you'll need to define this based on your needs)
+fn create_bar_chart(file_path: &str, data: &HashMap<String, f32>) -> Result<(), Box<dyn Error>> {
+    let root = BitMapBackend::new(file_path, (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mut sorted_data: Vec<(&String, &f32)> = data.iter().collect();
+    sorted_data.sort_by_key(|&(month, _)| month);
+
+    let categories: Vec<String> = sorted_data
+        .iter()
+        .map(|(month, _)| (*month).clone())
+        .collect();
+    let values: Vec<f32> = sorted_data.iter().map(|(_, &value)| value).collect();
+
+    let max_value = values.iter().cloned().fold(0. / 0., f32::max);
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Monthly Spending", ("sans-serif", 40).into_font())
+        .x_label_area_size(50)
+        .y_label_area_size(50)
+        .build_cartesian_2d(0..categories.len(), 0.0..max_value)?;
+
+    chart
+        .configure_mesh()
+        .x_labels(categories.len())
+        .x_label_formatter(&|x| {
+            if *x < categories.len() {
+                categories[*x].clone()
+            } else {
+                "".to_string()
+            }
+        })
+        .draw()?;
+
+    chart.draw_series(
+        values
+            .iter()
+            .enumerate()
+            .map(|(idx, &value)| Rectangle::new([(idx, 0.0), (idx + 1, value)], BLUE.filled())),
+    )?;
+
+    root.present()?;
+    Ok(())
+}
+
+fn calculate_yearly_comparison(expenses: &[Expense]) -> HashMap<String, f32> {
+    let mut yearly_totals = HashMap::new();
+    for expense in expenses {
+        let date = NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d").unwrap();
+        let year = date.format("%Y").to_string(); // Extract only the year as a string
+        *yearly_totals.entry(year).or_insert(0.0) += expense.amount;
+    }
+    yearly_totals
+}
+
+// Function to create a line graph (you'll need to define this based on your needs)
+fn create_line_graph(file_path: &str, data: &HashMap<String, f32>) -> Result<(), Box<dyn Error>> {
+    let root = BitMapBackend::new(file_path, (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    // Sort the data by year
+    let mut sorted_data: Vec<(&String, &f32)> = data.iter().collect();
+    sorted_data.sort_by_key(|&(year, _)| year);
+
+    let years: Vec<String> = sorted_data
+        .iter()
+        .map(|(year, _)| (*year).clone())
+        .collect();
+    let values: Vec<f32> = sorted_data.iter().map(|(_, &value)| value).collect();
+
+    let max_value = values.iter().cloned().fold(0. / 0., f32::max);
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Yearly Spending Comparison", ("sans-serif", 40).into_font())
+        .x_label_area_size(30)
+        .y_label_area_size(30)
+        .build_cartesian_2d(0..years.len(), 0.0..max_value)?;
+
+    chart
+        .configure_mesh()
+        .x_labels(years.len())
+        .x_label_formatter(&|x| {
+            if *x < years.len() {
+                years[*x].clone()
+            } else {
+                "".to_string()
+            }
+        })
+        .draw()?;
+
+    // Draw line
+    chart.draw_series(LineSeries::new(
+        values.iter().enumerate().map(|(idx, &value)| (idx, value)),
+        &RED,
+    ))?;
+
+    root.present()?;
+    Ok(())
+}
+
+// Function to load and display a chart in the UI
+pub fn load_and_display_chart(ui: &mut egui::Ui, file_path: &str) {
+    if let Ok((image_data, image_size)) = load_image_to_memory(file_path) {
+        let texture = load_texture_from_memory(
+            ui.ctx(),
+            &image_data,
+            [image_size[0] as usize, image_size[1] as usize],
+            file_path.to_owned(),
+        );
+
+        // Create an Image widget with the texture ID and size
+        let image_widget = egui::Image::new(&texture);
+
+        // Add the image widget to the UI
+        ui.add(image_widget);
     }
 }

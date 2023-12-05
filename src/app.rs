@@ -4,12 +4,11 @@ use crate::models::{add_expense, Expense, User};
 use crate::ui;
 use crate::ui::create_monthly_spending_chart;
 use crate::ui::load_texture_from_memory;
-use chrono::NaiveDate;
 use eframe::egui;
-use image::{io::Reader as ImageReader, DynamicImage, GenericImageView};
+use image::{io::Reader as ImageReader, GenericImageView};
 use std::collections::HashMap;
 
-fn load_image_to_memory(file_path: &str) -> Result<(Vec<u8>, [u32; 2]), image::ImageError> {
+pub fn load_image_to_memory(file_path: &str) -> Result<(Vec<u8>, [u32; 2]), image::ImageError> {
     let img = ImageReader::open(file_path)?.decode()?;
     let dimensions = img.dimensions();
     Ok((img.to_rgba8().into_raw(), [dimensions.0, dimensions.1]))
@@ -32,6 +31,9 @@ pub struct MyApp {
     pub new_password: String,
     pub showing_signup: bool,
     pub image_texture: Option<egui::TextureHandle>,
+    pub show_monthly_trends: bool,
+    pub show_yearly_comparison: bool,
+    pub show_monthly_spending: bool,
 }
 
 impl MyApp {
@@ -53,6 +55,9 @@ impl MyApp {
             new_password: String::new(),
             showing_signup: false,
             image_texture: None,
+            show_monthly_trends: false,
+            show_yearly_comparison: false,
+            show_monthly_spending: false,
         };
         app.load_expenses();
         app.update_monthly_spending_chart(egui_ctx);
@@ -77,14 +82,10 @@ impl MyApp {
 
     // In MyApp struct in app.rs
     pub fn update_monthly_spending_chart(&mut self, egui_ctx: &egui::Context) {
-        println!("Updating chart");
         let monthly_spending = self.calculate_category_totals();
-        println!("Monthly spending data: {:?}", monthly_spending);
         match create_monthly_spending_chart(&monthly_spending) {
             Ok(_) => {
-                println!("Chart created successfully.");
                 if let Ok((image_data, image_size)) = load_image_to_memory("chart.png") {
-                    println!("Loaded image to memory.");
                     let image_size_usize = [image_size[0] as usize, image_size[1] as usize];
 
                     // Ensure we use a unique identifier for the texture to avoid caching issues
@@ -104,7 +105,6 @@ impl MyApp {
                         image_size_usize,
                         texture_id_clone,
                     ));
-                    println!("Texture updated in egui context with ID {}", texture_id);
                 }
             }
             Err(e) => eprintln!("Error creating chart: {:?}", e),
@@ -121,19 +121,6 @@ impl MyApp {
         } else {
             self.warning_message = Some("Invalid username or password".to_string());
         }
-    }
-
-    pub fn get_monthly_spending(&self) -> HashMap<String, f32> {
-        let mut monthly_spending = HashMap::new();
-
-        for expense in &self.expenses {
-            let date = NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d").unwrap();
-            let month = date.format("%Y-%m").to_string();
-            let amount = monthly_spending.entry(month).or_insert(0.0);
-            *amount += expense.amount;
-        }
-
-        monthly_spending
     }
 
     pub fn logout(&mut self) {
