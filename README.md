@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-24ddc0f5d75046c5622901739e7c5dd533143b0c8e959d652212380cedb1ea36.svg)](https://classroom.github.com/a/RQfdh2iK)
 # Rust-based GUI for Personal Expense Tracker
 
 ## Description
@@ -10,6 +8,17 @@ The Rust Expense Tracker is a desktop application designed for personal finance 
 - Adding, viewing, and deleting expenses.
 - Categorizing expenses and viewing them as a pie chart.
 - Responsive UI with expense updates triggering a chart refresh.
+
+## Technologies & Tools
+- **Rust Programming Language**: Ensures safety and high performance.
+- **eGui Library**: Used for creating the interactive user interface.
+- **SQLite Database**: Manages and stores user and expense data.
+- **bcrypt**: Provides secure password hashing.
+- **Image Processing**: The `image` crate is used for image operations in chart generation.
+- **Plotters**: Utilized for data visualization like pie charts and bar graphs.
+- **Chrono**: Manages dates within the application.
+- **eFrame Framework**: Integrates `eGui` with the operating system for desktop support.
+
 
 ## Installation
 
